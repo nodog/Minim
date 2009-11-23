@@ -40,7 +40,7 @@ public class Delay extends UGen
 	 * */
 	
 	
-	protected void ugentick(float[] channels) 
+	protected void uGenerate(float[] channels) 
 	{
 	
 		buffer[j]=decay*channels[0];

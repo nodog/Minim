@@ -12,21 +12,43 @@ public class Filter extends UGen
 	 * */
 	 
 	//coefficients of the filter
-	//private float[] b = {1f,0f,0f};
-	private float[] b = {0.0055f,0.0111f,0.0055f};//test
-	private float[] a = {1,-1.8f,0.84f};//maybe this one could be of dimension 2
+
+	private float[] b = {1,0f,0f};
+	private float[] a = {1,0f,0f};//maybe this one could be of dimension 2
 	//samples in the filter
 	private float[] x = {0f,0f,0f};
 	private float[] y = {0f,0f,0f};
 	
-	public Filter(String type, float fc, float Q)
+	
+	public enum its { LP, HP };
+	
+	
+	public Filter(its c, float fc, float Q)
 	{
 		//TODO translate fc and q into b and a
+		
+		float X=(float)(Math.exp(-Math.PI*2*fc/44100));
+		
+		switch(c)
+		{
+			case LP : 
+				b[0]=1-X;
+				a[1]=X;
+				break;
+			case HP :
+				b[0]=(1+X)/2;
+				b[1]=-(1+X)/2;
+				a[1]=X;
+				break;
+			default :
+				break;
+		}
+		System.out.println("coeff " + b[0] + ", " + b[1] + ", " + b[2]);
 	}
 	
 	
 	@Override
-	protected void ugentick(float[] channels) 
+	protected void uGenerate(float[] channels) 
 	{
 		/*The following lines implement :
 		 * y(n)=x(n)+b(1)*x(n-1)+b(2)*x(n-2)-a(1)*y(n-1)-a(2)*y(n-2)

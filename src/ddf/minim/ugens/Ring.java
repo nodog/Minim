@@ -12,12 +12,14 @@ public class Ring extends UGen
 	
 	
 	
-	protected void ugentick(float[] channels) 
+	protected void uGenerate(float[] channels) 
 	{
 
 		for(int i = 0; i < channels.length; i++)
 		{
-			channels[i] = sample;
+			channels[i] = 0;
 		}
 
+	}
+		
 }
