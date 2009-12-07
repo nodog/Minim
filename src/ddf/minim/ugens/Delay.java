@@ -22,7 +22,7 @@ public class Delay extends UGen
 		
 	}
 	
-	/**
+	/*
 	 * Thoughts : every UGen should know the size of channels
 	 * Here for the delay, or for the filter, it would be useful to know how
 	 * many buffers we need to create.

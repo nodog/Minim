@@ -1,6 +1,8 @@
 package ddf.minim.ugens;
 
-public class Filter extends UGen
+
+
+public abstract class Filter extends UGen
 {
 	
 	/*Basic filter UGen implementing a biquadratic transfer function.
@@ -13,56 +15,89 @@ public class Filter extends UGen
 	 
 	//coefficients of the filter
 
-	private float[] b = {1,0f,0f};
-	private float[] a = {1,0f,0f};//maybe this one could be of dimension 2
+	protected float[] a;
+	protected float[] b;//maybe this one could be of dimension 2
 	//samples in the filter
-	private float[] x = {0f,0f,0f};
-	private float[] y = {0f,0f,0f};
+	private float[] x;
+	private float[] y;
 	
+	float fc, Q;
+
 	
-	public enum its { LP, HP };
-	
-	
-	public Filter(its c, float fc, float Q)
+	public Filter(float centerfreq, float QualityFactor)
 	{
-		//TODO translate fc and q into b and a
-		
-		float X=(float)(Math.exp(-Math.PI*2*fc/44100));
-		
-		switch(c)
-		{
-			case LP : 
-				b[0]=1-X;
-				a[1]=X;
-				break;
-			case HP :
-				b[0]=(1+X)/2;
-				b[1]=-(1+X)/2;
-				a[1]=X;
-				break;
-			default :
-				break;
-		}
-		System.out.println("coeff " + b[0] + ", " + b[1] + ", " + b[2]);
+			fc=centerfreq;
+			Q=QualityFactor;
 	}
+	
+	
+	
+	
+	/*
+	 * nb : All coefficients are computed in sampleRateChanged because at constructor time
+	 * sampleRate is still undefined (=zero). 
+	 * */
+
+	@Override
+	protected void sampleRateChanged()
+	{
+		calcCoeff();
+	    initArrays();
+	}
+	
+	
+	public void changeFreq(float f)
+	{
+		fc=f;
+		calcCoeff();
+	}
+	
+	
+	
+	
+	//coefficients will be computed in the different filters subclasses
+	protected abstract void calcCoeff();
 	
 	
 	@Override
 	protected void uGenerate(float[] channels) 
 	{
-		/*The following lines implement :
-		 * y(n)=x(n)+b(1)*x(n-1)+b(2)*x(n-2)-a(1)*y(n-1)-a(2)*y(n-2)
-		*/
-		x[2]=x[1];
-		x[1]=x[0];
-		x[0]=channels[0];
-		y[2]=y[1];
-		y[1]=y[0];
-		y[0]=b[0]*x[0]+b[1]*x[1]+b[2]*x[2]-a[1]*y[1]-a[2]*y[2];
+
+	      System.arraycopy(x, 0, x, 1, x.length - 1);
+	      x[0] = channels[0];
+	      float s = 0;
+	      for (int j = 0; j < a.length; j++)
+	      {
+	        s += a[j] * x[j];
+	      }
+	      for (int j = 0; j < b.length; j++)
+	      {
+	        s += b[j] * y[j];
+	      }
+	      System.arraycopy(y, 0, y, 1, y.length - 1);
+	      y[0] = s;
 		
+
 		for(int i = 0; i < channels.length; i++)
 		{
 			channels[i] = y[0];
 		}
 	}
+	
+	
+	
+
+	
+	  final void initArrays()
+	  {
+	    int memSize = (a.length >= b.length) ? a.length : b.length;
+	    x = new float[memSize];
+	    y = new float[memSize];
+
+	  }
+	
+	
+	
 }
+
+

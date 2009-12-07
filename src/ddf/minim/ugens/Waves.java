@@ -14,7 +14,7 @@ public class Waves
 	
 	//perfect waveforms
 	public final static Wavetable Sine = WavetableGenerator.gen10(8192, new float[] { 1 });
-	public final static Wavetable Saw = WavetableGenerator.gen7(8192, new float[] {1,-1}, new int[] {8192});
+	public final static Wavetable Saw = WavetableGenerator.gen7(8192, new float[] {-1,1}, new int[] {8192});
 	public final static Wavetable Square = WavetableGenerator.gen7(8192, new float[] {-1,-1,1,1}, new int[] {4096,0,4096});
 	public final static Wavetable Triangle = WavetableGenerator.gen7(8192, new float[] {-1,1,-1}, new int[] {4096,4096});
 	//shortcut for a 0.25 Pulse
@@ -156,8 +156,28 @@ public class Waves
 	}
 	
 	
+	//random pulses, proba being proportional to the number of pulses
+	public static Wavetable RandomPulses(float proba)
+	{//values for proba : 1 to 100
+		float[] a = new float[8192];
+		if(proba<1 || proba > 100) proba=50;//could be changed for more freedom
+		proba = 1 - proba/10000;
+		for(int i=0;i<a.length;i++)
+		{
+			if(Math.random()>proba) a[i]=(float)Math.random()*2-1;
+		}
+		Wavetable rand = new Wavetable(a);
+		rand.normalize();
+		return rand;
+	}
 	
+	//advanced user functions
+	public static Wavetable Custom(float[] amplitudes)
+	{
+		return WavetableGenerator.gen10(8192, amplitudes);
+	}
 	
+
 	
 	
 }

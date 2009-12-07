@@ -52,6 +52,12 @@ public class Oscil extends UGen
 	
 	
 	
+	public void changeFreq(float freqVal)
+	{
+		stepSize = freqVal/sampleRate;
+	}
+	
+	
 	
 	public void sampleRateChanged()
 	{
