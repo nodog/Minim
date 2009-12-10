@@ -1,16 +1,98 @@
 package ddf.minim.ugens;
 
 import ddf.minim.AudioOutput;
+import ddf.minim.Minim;
+import java.util.ArrayList;
 
 public abstract class UGen
 {
-	private UGen in;
+	// jam3: enum is automatically static so it can't be in the nested class
+	public enum InputType {CONTROL, AUDIO};
 	
-	// ddf: I don't believe this is being used for anything right now
-	//      and I don't recall what I thought I'd need it for.
-	protected AudioOutput out;
+	// jam3: declaring an inner nested class here
+	class UGenInput
+	{
+		private UGen incoming;
+		private InputType inputType;
+		
+	    UGenInput()
+	    {
+	    	// jam3: default to audio input
+	    	this(InputType.AUDIO);
+	    }
+	    UGenInput(InputType it)
+	    {
+	    	inputType = it;
+	    	//try
+	    	//{
+	    		uGenInputs.add(this);
+	    	//} catch (ArrayIndexOutOfBoundsException e) 
+	    	//{
+	    	 //   System.err.println("Caught ArrayIndexOutOfBoundsException: " 
+	    	  //  		+ e.getMessage());
+	    	//}
+	    }
+	    InputType getInputType()
+	    {
+	    	return inputType;
+	    }
+	    UGen getOuterUGen()
+	    {
+	    	return UGen.this;
+	    }
+	    UGen getIncomingUGen()
+	    {
+	    	return incoming;
+	    }
+	    void setIncomingUGen(UGen in)
+	    {
+	    	incoming = in;
+	    }
+	    boolean isPatched()
+	    {
+	    	return (incoming != null);
+	    }
+	    float[] getLastValues()
+		{
+			return getIncomingUGen().getLastValues();
+		}
+	    String getInputTypeAsString()
+	    {
+	    	String typeLabel = null;
+	    	switch (inputType)
+	    	{
+	    	case AUDIO :
+	    		typeLabel = "AUDIO";
+	    		break;
+	    	case CONTROL :
+	    		typeLabel = "CONTROL";
+	    		break;	
+	    	}
+	    	return typeLabel;
+	    }
+	    void printInput()
+	    {
+	    	Minim.debug("UGenInput: " 
+	    			+ " signal = " + getInputTypeAsString() + " " 
+	    			+ isPatched() );
+	    }
+	}
 	
+    private ArrayList<UGenInput> uGenInputs;
+	private float[] lastValues;
 	protected float sampleRate;
+	private int nOutputs;
+	private int currentTick;
+	
+	public UGen()
+	{
+		uGenInputs = new ArrayList<UGenInput>();
+		// TODO How to set length of last values appropriately?
+		// jam3: Using "2" here is wrong.  Could make ArrayList and set size with tick?
+		lastValues = new float[2];
+		nOutputs = 0;
+		currentTick = 0;
+	}
 	
 	// TODO describe how this patching stuff works.
 	/**
@@ -25,13 +107,22 @@ public abstract class UGen
 	 * </pre>
 	 */
 	// ddf: this is final because we never want people to override it.
-	public final UGen patch(UGen connectTo)
+	public final UGen patch(UGen connectToUGen)
 	{
-		// was:	connectTo.in = this;
-		// note that the default implementation of addInput 
-		// does exactly the same thing.
-		connectTo.addInput(this);
-		return connectTo;
+		// jam3: connecting to a UGen is the same as connecting to it's "mainAudio" input
+		connectToUGen.addInput(this);
+		nOutputs += 1;
+		System.out.println("nOutputs = " + nOutputs);
+		return connectToUGen;
+	}
+	
+	public final UGen patch(UGenInput connectToInput)
+	{
+		connectToInput.setIncomingUGen(this);
+		nOutputs +=1;
+		System.out.println("nOutputs = " + nOutputs);
+		// TODO setSampleRate(sampleRate);
+		return connectToInput.getOuterUGen();
 	}
 	
 	// ddf: Protected because users of UGens should never call this directly.
@@ -39,13 +130,18 @@ public abstract class UGen
 	//      is patched to them. See the Bus class.
 	protected void addInput(UGen input)
 	{
-		in = input;
-	}
-	
-	// ddf: I don't think we need this anymore.
-	public void patch(Frequency freq)
-	{
-		freq.useFrequency(this);
+		// jam3: This default behavior is that the incoming signal will be added
+		// 		to some input called "audio" if it exists.
+		Minim.debug("UGen addInput called.");
+		// TODO change input checking to an Exception?
+		if (uGenInputs.size() > 0)
+		{
+			Minim.debug("Initializing default input on something");	
+			this.uGenInputs.get(0).setIncomingUGen(input);
+		}  else
+		{
+			System.err.println("Trying to connect to UGen with no default input.");
+		}
 	}
 	
 	/**
@@ -56,9 +152,8 @@ public abstract class UGen
 	 */
 	public final void patch(AudioOutput output)
 	{
-		out = output;
-		patch(out.bus);
-		setSampleRate(out.sampleRate());
+		patch(output.bus);
+		setSampleRate(output.sampleRate());
 	}
 	
 	/**
@@ -71,11 +166,50 @@ public abstract class UGen
 	 */
 	public void tick(float[] channels)
 	{
-		if ( in != null )
+		if (nOutputs > 0)
 		{
-			in.tick(channels);
+			currentTick = (currentTick + 1)%(nOutputs);
+			//System.out.println("currentTick = " + currentTick
+				//	+ " nOutputs = " + nOutputs );
 		}
+		if (0 == currentTick) 
+		{			
+			if (uGenInputs.size() > 0)
+			{
+				for(int i=0; i<uGenInputs.size(); i++)
+				{		
+					if ((uGenInputs.get(i) != null) && (uGenInputs.get(i).isPatched()))
+					{
+						float[] tmp;
+						switch (uGenInputs.get(i).inputType)
+						{
+						case CONTROL :
+							tmp = new float[1];
+							break;
+						default : // includes AUDIO
+							tmp = new float[channels.length];
+							break;
+						}
+						//float[] tmp = new float[channels.length];
+						uGenInputs.get(i).getIncomingUGen().tick(tmp);
+					}
+				}
+			}
 		uGenerate(channels);
+		//Minim.debug(" ticking : value = " + channels[0]);
+		System.arraycopy(channels, 0, lastValues, 0, channels.length);
+		}
+	}
+	
+	/**
+	 * Implement this method when you extend UGen.
+	 * @param channels
+	 */
+	protected abstract void uGenerate(float[] channels);
+		
+	float[] getLastValues()
+	{
+		return lastValues;
 	}
 	
 	/**
@@ -89,13 +223,6 @@ public abstract class UGen
 	{
 		// default implementation does nothing.
 	}
-	
-	
-	/**
-	 * Implement this method when you extend UGen.
-	 * @param channels
-	 */
-	protected abstract void uGenerate(float[] channels);
 	
 	/**
 	 * Set the sample rate for this UGen.
@@ -112,14 +239,34 @@ public abstract class UGen
 	//      the should override sampleRateChanged()
 	public final void setSampleRate(float newSampleRate)
 	{
-		if ( sampleRate != newSampleRate )
+		if (sampleRate != newSampleRate)
 		{
 			sampleRate = newSampleRate;
 			sampleRateChanged();
 		}
-		if ( in != null )
+		if (uGenInputs.size() > 0)
 		{
-			in.setSampleRate(newSampleRate);
+			for(int i=0; i<uGenInputs.size(); i++)
+			{		
+				if ((uGenInputs.get(i) != null) && (uGenInputs.get(i).isPatched()))
+				{
+					uGenInputs.get(i).getIncomingUGen().setSampleRate(newSampleRate);
+				}
+			}			
 		}
+	}
+	
+	public void printInputs()
+	{
+	   for(int i=0; i<uGenInputs.size(); i++)
+	   {
+		   Minim.debug("uGenInputs " + i + " ");
+		   if (uGenInputs.get(i) == null)
+		   {
+			   Minim.debug("null");   
+		   } else {
+			   uGenInputs.get(i).printInput();
+		   }
+	   }
 	}
 }
