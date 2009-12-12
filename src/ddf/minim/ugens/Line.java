@@ -5,18 +5,18 @@ import ddf.minim.ugens.UGen.UGenInput;
 import ddf.minim.Minim;
 
 /**
- * A UGen that starts at an amplitude value
- * and changes to zero over a specified time.
+ * A UGen that starts at a value
+ * and changes linearly to another value over a specified time.
  * @author nodog
  *
  */
-public class Damp extends UGen
+public class Line extends UGen
 {
 	// jam3: define the inputs to Oscil
-	public UGenInput audio;
-
-	// the initial amplitude of the damp
+	// the initial amplitude
 	private float begAmp;
+	// the ending amplitude
+	private float endAmp;
 	// the current amplitude
 	private float amp;
 	// the time from amp to 0
@@ -29,20 +29,24 @@ public class Damp extends UGen
 	private boolean isActivated;
 	
 	// constructors
-	public Damp()
+	public Line()
 	{
-		this(1.0f, 1.0f);
+		this(1.0f, 1.0f, 0.0f);
 	}
-	public Damp(float dT)
+	public Line(float dT)
 	{
-		this(dT, 1.0f);
+		this(dT, 1.0f, 0.0f);
 	}
-	public Damp(float dT, float beginningAmplitude)
+	public Line(float dT, float beginningAmplitude)
+	{
+		this(dT, beginningAmplitude, 0.0f);
+	}
+	public Line(float dT, float begAmplitude, float endAmplitude)
 	{
 		super();
-		audio = new UGenInput(InputType.AUDIO);
 		dampTime = dT;
-		begAmp = beginningAmplitude;
+		begAmp = begAmplitude;
+		endAmp = endAmplitude;
 		dampNow = 0f;  // TODO test value
 		isActivated = false;
 		Minim.debug(" dampTime = " + dampTime + " begAmp = " + begAmp + " now = " + dampNow);
@@ -62,24 +66,27 @@ public class Damp extends UGen
 	protected void uGenerate(float[] channels) 
 	{
 		//Minim.debug(" dampTime = " + dampTime + " begAmp = " + begAmp + " now = " + now);
-		if ((!isActivated) || (dampNow >= dampTime))
+		if (!isActivated)
 		{
 			for(int i = 0; i < channels.length; i++)
 			{
-				//channels[i] = 0.1f*audio.getLastValues()[i];
-				channels[i] = 0.0f;
+				channels[i] = begAmp;
+			}
+		} else if (dampNow >= dampTime)
+		{
+			for(int i = 0; i < channels.length; i++)
+			{
+				channels[i] = endAmp;
 			}
 		} else 
 		{
-			// TODO if samplerate changes in the middle of Damp, there will be a click
+			// TODO if samplerate changes in the middle of Line, there will be a click
 			// TODO need to change to method as in ADSR
-			amp = begAmp*(1 - (dampNow/dampTime));
-			//Minim.debug(" dampTime = " + dampTime + " begAmp = " + begAmp + " amp = " + amp + " now = " + now);
+			amp = begAmp*(1 - (dampNow/dampTime)) + endAmp*(dampNow/dampTime);
+			//Minim.debug(" dampTime = " + dampTime + " begAmp = " + begAmp + " amp = " + amp + " dampNow = " + dampNow);
 				for(int i = 0; i < channels.length; i++)
 			{
-				float tmp = audio.getLastValues()[i];
-				tmp *= amp;
-				channels[i] = tmp;
+				channels[i] = amp;
 			}
 			dampNow += timeStepSize;
 		}
