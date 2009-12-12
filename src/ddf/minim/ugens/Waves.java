@@ -144,7 +144,7 @@ public class Waves
 	}
 	
 	public static Wavetable RandomNoise()
-	{
+	{//looped noise
 		float[] a = new float[8192];
 		for(int i=0;i<a.length;i++)
 		{
@@ -177,6 +177,32 @@ public class Waves
 		return WavetableGenerator.gen10(8192, amplitudes);
 	}
 	
+	
+	
+	public static Wavetable add(float [] amps, Wavetable ... waves)
+	{
+		if(amps.length != waves.length) 
+		{
+			System.out.println("add() : amplitude array size must match the number of waveforms...");
+			System.out.println("...returning the first waveform ");
+			return waves[0];
+		}
+		
+		
+		float[] acc= new float[8192];
+		
+		for(int i=0;i<waves.length;i++)
+		{
+			waves[i].scale(amps[i]);
+			
+			for(int j=0;j<8192;j++)
+			{
+			acc[j] += waves[i].get(j);
+			}
+		}
+
+		return new Wavetable(acc);
+	}
 
 	
 	
