@@ -89,7 +89,12 @@ public class Delay extends UGen
 		amplitude = new UGenInput(InputType.CONTROL);
 		delayMs = delayInMs;
 		amp = ampli;
+	
 	}
+	
+	
+	
+	
 	public void sampleRateChanged()
 	{
 		currentDelay = (int)Math.floor(delayMs*sampleRate/1000);

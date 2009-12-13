@@ -178,7 +178,7 @@ public class Waves
 	}
 	
 	
-	
+	//methode for adding any number of wavetables, each with their amplitude
 	public static Wavetable add(float [] amps, Wavetable ... waves)
 	{
 		if(amps.length != waves.length) 

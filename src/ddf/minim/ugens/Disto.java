@@ -1,5 +1,8 @@
 package ddf.minim.ugens;
 
+import ddf.minim.ugens.UGen.InputType;
+import ddf.minim.ugens.UGen.UGenInput;
+
 public class Disto extends UGen 
 {
 	/**
@@ -12,21 +15,25 @@ public class Disto extends UGen
 	 * @author nb
 	 */
 	
-	float amount;
+	//audio input
+	public UGenInput audio;
+	
+	
+	float amount2;
+	public UGenInput amount;
 	Wavetable shape;
 	
 	public Disto(Wavetable sh, float am)
 	{
+		super();
 		shape=sh;
-		amount=am;
+		amount2=am;
+		audio = new UGenInput(InputType.AUDIO);
+		amount = new UGenInput(InputType.CONTROL);
 	}
 	
 	
-	public void changeAmount(float amountVal)
-	{
-		amount = amountVal;
-	}
-	
+
 	
 	
 	
@@ -39,11 +46,20 @@ public class Disto extends UGen
 	
 	protected void uGenerate(float[] channels)
 	{
+		if ((amount != null) && (amount.isPatched()))
+		{
+			amount2 = amount.getLastValues()[0];
+
+		}
+		
+		
 		for(int i = 0; i < channels.length; i++)
 		{
-			float a= amount*channels[i];
+			
+			float a= amount2*audio.getLastValues()[i];
+			
 			channels[i]= (Math.abs(a)> 1f)? Math.signum(a) : shape.value(a/2+0.5f);
-			channels[i]/=amount;
+			channels[i]/=amount2;
 		}
 	}
 
