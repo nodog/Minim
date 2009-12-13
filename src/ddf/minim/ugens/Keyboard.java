@@ -1,6 +1,8 @@
 package ddf.minim.ugens;
 
-public class Keyboard extends UGen implements Instrument {
+import ddf.minim.AudioOutput;
+
+public class Keyboard implements Instrument {
 	
 	
 	/**
@@ -11,12 +13,13 @@ public class Keyboard extends UGen implements Instrument {
 	 * 
 	 * 
 	 */
-	
+	AudioOutput out;
 	Oscil [] keys ;//do it with array
 	int newoscil=0;
 	
-	public Keyboard(Waveform waveform, int poly)
+	public Keyboard(Waveform waveform, int poly, AudioOutput output)
 	{
+		out = output;
 		keys = new Oscil[poly]; 
 		for(int i=0;i<poly;i++)
 		{

@@ -1,26 +1,111 @@
 package ddf.minim.ugens;
 
+
+
 public class Delay extends UGen
 {
+	/**
+	 * Delay unit 
+	 * You can specify a delay time in milliseconds, a number of echoes 
+	 * and the way the amplitude varies between the echoes 
+	 * The initial delay and number of echoes that you specify in the constructor 
+	 * will determine the length of the buffer so you can't have a longer delay 
+	 * when playing with the delay UGenInput.
+	 * 
+	 * @author nb
+	 * 
+	 */
+	//audio input
+	public UGenInput audio;
+	//initial delay in ms
+	private float delayMs;
+	//initial delay in samples
+	private int currentDelay;
+	//UGenIput to modify the delay
+	public UGenInput delay;
+	//array of amps for the echoes
+	private float[] amps;
+	//general amplitude of the set of echoes
+	private float amp;
+	//Input for the general amplitude
+	public UGenInput amplitude;
 	
+	//the buffer used to store samples
 	float[] buffer;
+	//size of the complete buffer
 	int limit;
-	float decay;
+	
+
+	
+	
+	public static final int ONES = 1;
+	public static final int EXP = 2;
+	public static final int LIN = 3;
+
 	int j=0;
 	
-	public Delay(int interval, float dec)
+	public Delay(float delayInMs, int numberOfEchoes , int type, float ampli)
 	{
-		buffer=new float[interval];
-		limit=interval;
-		decay=dec;
+		this(delayInMs,ampli);
+		amps = new float[numberOfEchoes];
 		
-		//optional, as floats are initialized at zero
-		for(int i=0;i<limit;i++)
+		
+		if(type == 3)
 		{
-			buffer[i]=0f;
+			for(int i=0;i<numberOfEchoes;i++)
+			{
+				amps[i]=(1 - (float)i/numberOfEchoes);
+			}
 		}
+		else if(type == 2)
+		{
+			for(int i=0;i<numberOfEchoes;i++)
+			{
+				amps[i]=(float)Math.exp(-i);//TODO : better exponential
+			}
+		}
+		else
+		{
+			for(int i=0;i<numberOfEchoes;i++)
+			{
+				amps[i]=1;
+			}
+		}
+	}
+	
+	public Delay(float delayInMs, float [] amplitudes, float ampli)
+	{
+		this(delayInMs,ampli);
+		amps = amplitudes;
+	}
+	
+	
+	
+	public Delay(float delayInMs,float ampli)
+	{
+		super();
+		audio = new UGenInput(InputType.AUDIO);
+		delay = new UGenInput(InputType.CONTROL);
+		amplitude = new UGenInput(InputType.CONTROL);
+		delayMs = delayInMs;
+		amp = ampli;
+	}
+	public void sampleRateChanged()
+	{
+		currentDelay = (int)Math.floor(delayMs*sampleRate/1000);
+		limit = amps.length*currentDelay+1;
+		
+		buffer=new float[limit];
+		setSampleRate(sampleRate);
+		j=limit-1;
 		
 	}
+	
+	public void calcDelays()
+	{
+		currentDelay = (int)Math.floor(delayMs*sampleRate/1000);
+	}
+	
 	
 	/*
 	 * Thoughts : every UGen should know the size of channels
@@ -43,13 +128,36 @@ public class Delay extends UGen
 	protected void uGenerate(float[] channels) 
 	{
 	
-		buffer[j]=decay*channels[0];
-		j++;
-		j%=limit;
+		
+		
+		if ((amplitude != null) && (amplitude.isPatched()))
+		{
+			
+			amp = amplitude.getLastValues()[0];
+
+		}
+		if ((delay != null) && (delay.isPatched()))
+		{
+			delayMs= (int)delay.getLastValues()[0];
+			calcDelays();
+		}
+		
+		float tmp= audio.getLastValues()[0];
+		buffer[j]=tmp;
 		for(int i = 0; i < channels.length; i++)
 		{
-			channels[i] += buffer[j];
+			channels[i] = tmp;
+			
+			for(int k =0; k< amps.length ; k++)
+			{
+				channels[i] += amp*amps[k]*buffer[(j+(k+1)*currentDelay)%limit];
+			}
 		}
+		
+		j--;
+		if(j<0) j = limit-1;
+
+
 		
 	}
 }
