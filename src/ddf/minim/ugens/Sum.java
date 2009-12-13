@@ -24,12 +24,11 @@ public class Sum extends UGen{
 	 * 
 	 * 
 	 * 
-	 * PROBLEM : problems when fetching last values...
-	 * (NullPointerException)
+	 * for now it works but I have to call patch(sum.sumIns[x]) which is not convenient
 	 */
 	
 	
-	private UGenInput[] sumIns;
+	public UGenInput[] sumIns;
 	
 	
 	
@@ -39,7 +38,7 @@ public class Sum extends UGen{
 		sumIns = new UGenInput[numberOfIns];
 		for(int i=0; i <numberOfIns ; i++)
 		{
-			sumIns[i] = new UGenInput();
+			sumIns[i] = new UGenInput(InputType.AUDIO);
 		}
 		
 	}
@@ -49,12 +48,12 @@ public class Sum extends UGen{
 	@Override
 	protected void uGenerate(float[] channels) 
 	{		
-
+		//nb : maybe I should initialize channels[]
 		for(int i=0; i<sumIns.length;i++)
 		{
 			for(int j =0 ; j<channels.length;j++)
 			{
-			channels[j]=sumIns[i].getLastValues()[j];
+			channels[j]+=sumIns[i].getLastValues()[j];
 			}
 		}
 	}
